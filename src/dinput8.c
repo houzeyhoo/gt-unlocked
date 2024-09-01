@@ -21,7 +21,7 @@ void setup()
     /* Reliable way to wait for the game to initialize (hooking stuff too early may crash). */
     SendMessageA(get_game_window(), WM_NULL, 0, 0);
 
-#ifdef PATCH_NTPROTECTVIRTUALMEMORY
+#ifdef FIX_NTPROTECTVIRTUALMEMORY
     /* Need to un-hook NtProtectVirtualMemory. */
     HMODULE module = GetModuleHandleA("ntdll");
     FARPROC proc = GetProcAddress(module, "NtProtectVirtualMemory");
