@@ -1,91 +1,172 @@
 #include "utils.h"
 #include <psapi.h>
+#include <stdlib.h>
+#include <string.h>
+#include <windows.h>
 
-HWND get_game_window()
+#include <stdio.h>
+
+HWND GetClientWindow()
 {
     return FindWindowA(NULL, "Growtopia");
 }
 
-HMODULE get_game_exe_module()
+HMODULE GetClientExeModule()
 {
     return GetModuleHandleA(NULL);
 }
 
-void *patch_memory(void *dest, const void *src, size_t count)
+int32_t ParsePattern(const char *pattern, OptionalByte *outBytes, size_t maxCount)
 {
-    DWORD old = 0;
+    int32_t count = 0;
+    const char *p = pattern;
 
-    if (!VirtualProtect(dest, count, PAGE_EXECUTE_READWRITE, &old))
+    while (*p != '\0')
     {
-        return NULL;
-    }
-    void *out = memcpy(dest, src, count);
+        if (isspace((unsigned char)*p))
+        {
+            p++;
+            continue;
+        }
 
-    if (!VirtualProtect(dest, count, old, &old))
-    {
-        /*
-         * Treat failure to set old page protection as a failed operation altogether, as incorrect memory page
-         * protection values could trip anti-tamper mechanics on certain clients
-         */
-        return NULL;
-    }
+        if ((size_t)count >= maxCount)
+        {
+            // Provided buffer is too small
+            return -1;
+        }
 
-    return out;
+        if (*p == '?')
+        {
+            outBytes[count++] = WILDCARD_BYTE;
+            // Wildcard can be "?" or "??"
+            p++;
+            if (*p == '?')
+            {
+                p++;
+            }
+        }
+        else if (isxdigit((unsigned char)*p))
+        {
+            char *end;
+            OptionalByte value = (OptionalByte)strtoul(p, &end, 16);
+            if (value > 0xFF)
+            {
+                // Invalid byte
+                return -1;
+            }
+            outBytes[count++] = value;
+
+            if (p == end)
+            {
+                // Parsing failed, skip ahead
+                p++;
+            }
+            else
+            {
+                // All ok, move past number
+                p = end;
+            }
+        }
+        else
+        {
+            // Unexpected character
+            return -1;
+        }
+    }
+    return count;
 }
 
-void *find_memory(const uint16_t *pattern, size_t count)
+void *PatchMemory(void *dest, const void *src, size_t size)
+{
+    DWORD oldProtection = 0;
+    if (!VirtualProtect(dest, size, PAGE_EXECUTE_READWRITE, &oldProtection))
+    {
+        return NULL;
+    }
+    memcpy(dest, src, size);
+
+    if (!VirtualProtect(dest, size, oldProtection, &oldProtection))
+    {
+        // Even though the copy operation finished, return NULL to indicate failure as failing to restore protection
+        // will crash the client on some versions
+        return NULL;
+    }
+    return (void *)dest;
+}
+
+void *FindMemory(const OptionalByte *pattern, size_t count)
 {
     if (pattern == NULL || count == 0)
     {
         return NULL;
     }
 
-    MODULEINFO mi;
-    if (!GetModuleInformation(GetCurrentProcess(), get_game_exe_module(), &mi, sizeof(mi)))
+    MODULEINFO moduleInfo = {0};
+    if (!GetModuleInformation(GetCurrentProcess(), GetClientExeModule(), &moduleInfo, sizeof(moduleInfo)))
     {
         return NULL;
     }
 
-    uint8_t *cur = mi.lpBaseOfDll;
-    uint8_t *end = cur + mi.SizeOfImage - count;
-
-    /* Locate the first non-wildcard (-1) byte in the pattern */
-    size_t anchor = 0;
-    while (anchor < count && pattern[anchor] == (uint16_t)-1)
+    if (count > moduleInfo.SizeOfImage)
     {
-        ++anchor;
+        return NULL;
     }
 
-    if (anchor == count)
+    uint8_t *begin = moduleInfo.lpBaseOfDll;
+    uint8_t *end = begin + moduleInfo.SizeOfImage;
+    uint8_t *softEnd = end - count;
+
+    // Locate first non-wildcard byte
+    size_t anchorIndex = 0;
+    while (anchorIndex < count && pattern[anchorIndex] == WILDCARD_BYTE)
     {
-        /* If the entire pattern is just wildcards, anything matches */
-        return (void *)cur;
+        ++anchorIndex;
     }
 
-    while (cur <= end)
+    if (anchorIndex == count)
     {
-        int ok = 1;
-        for (size_t i = anchor; i < count; i++)
+        // Entire pattern is wildcards, anything matches
+        return begin;
+    }
+
+    uint8_t *p = begin;
+    while (p <= softEnd)
+    {
+        // Find next occurrence of anchor byte
+        size_t remaining = (size_t)(end - (p + anchorIndex));
+        uint8_t *anchor = memchr(p + anchorIndex, pattern[anchorIndex], remaining);
+        if (!anchor)
         {
-            if (pattern[i] == (uint16_t)-1)
-            {
-                /* Skip wildcards */
-                continue;
-            }
+            break;
+        }
 
-            if (*(cur + i) != pattern[i])
+        uint8_t *candidate = anchor - anchorIndex;
+        if (candidate > softEnd)
+        {
+            break;
+        }
+
+        // Proper full comparison
+        int foundMatch = 1;
+        for (size_t i = 0; i < count; i++)
+        {
+            if (pattern[i] != WILDCARD_BYTE && candidate[i] != pattern[i])
             {
-                ok = 0;
+                foundMatch = 0;
                 break;
             }
         }
 
-        if (ok)
+        if (foundMatch)
         {
-            return (void *)(cur);
+            return candidate;
         }
-        cur++;
+        p = candidate + 1;
     }
-
     return NULL;
+}
+
+void ShowErrorMessageBox(const char *message)
+{
+    MessageBoxA(NULL, message, "Error", MB_OK | MB_ICONERROR | MB_TOPMOST | MB_SETFOREGROUND);
 }

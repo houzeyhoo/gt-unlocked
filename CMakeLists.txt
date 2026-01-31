@@ -12,7 +12,7 @@ endif()
 add_subdirectory(vendor/minhook)
 
 add_library(${PROJECT_NAME} SHARED
-    src/dinput8.c
+    src/dllmain.c
     src/dinput8.def
     src/fps.c
     src/utils.c

@@ -1,29 +1,26 @@
 #include "fps.h"
-
 #include <windows.h>
 
-SetFPSLimit_t SetFPSLimit_real = NULL;
+SetFPSLimitFn originalSetFPSLimit = NULL;
 
-void set_optimal_fps_limit(void)
+void SetOptimalFPSLimit(void)
 {
     DEVMODE dm = {.dmSize = sizeof(DEVMODE)};
 
-    /*
-     * The game window is always tied to the primary display, so iteration through display devices is unnecessary.
-     * See https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-enumdisplaysettingsa
-     */
+    // The client window is always created on the primary display device, so just check its refresh rate and set
+    // the FPS limit accordingly
     if (EnumDisplaySettingsA(NULL, ENUM_CURRENT_SETTINGS, &dm))
     {
-        SetFPSLimit_real(NULL, (float)dm.dmDisplayFrequency);
+        originalSetFPSLimit(NULL, (float)dm.dmDisplayFrequency);
     }
     else
     {
-        /* Fall back to 60 FPS */
-        SetFPSLimit_real(NULL, 60.0f);
+        // Fall back to 60 FPS
+        originalSetFPSLimit(NULL, 60.0f);
     }
 }
 
-void __fastcall SetFPSLimit_hook(void *arg, float fps)
+void __fastcall SetFPSLimit(void *this, float fps)
 {
-    set_optimal_fps_limit();
+    SetOptimalFPSLimit();
 }

@@ -1,30 +1,24 @@
 #pragma once
 #include <stdint.h>
 
-/*
- * Modern (4.0+?) clients hook NtProtectVirtualMemory, so the function has to be "unhooked". Comment this if compiling
- * for an older client.
- */
+// Modern (V4.00+?) clients hook NtProtectVirtualMemory to prevent tampering. Comment out if compiling for an older
+// version
 #define FIX_NTPROTECTVIRTUALMEMORY 1
 
-/* NOLINTBEGIN */
+// NOLINTBEGIN
 #ifdef _WIN64
-/* Legacy clients */
+// Standalone/legacy clients
 
-static const uint8_t NtProtectVirtualMemory_prologue[] = {0x4c, 0x8b, 0xd1, 0xb8, 0x50};
-
-static const uint16_t SetFPSLimit_signature[] = {0x4C, 0x8B, 0xDC, 0x48, 0x81, 0xEC, 0xC8, 0x00, 0x00, 0x00, 0x48, 0x8B,
-                                                 -1,   -1,   -1,   -1,   -1,   0x48, 0x33, 0xC4, 0x48, 0x89, 0x84, 0x24,
-                                                 0xB0, 0x00, 0x00, 0x00, 0x0F, 0x57, 0xC0, 0x0F, 0x2F, 0xC8};
+static const uint8_t NtProtectVirtualMemoryPrologue[] = {0x4c, 0x8b, 0xd1, 0xb8, 0x50};
+static const char *SetFPSLimitPattern =
+    "4C 8B DC 48 81 EC C8 00 00 00 48 8B ? ? ? ? ? 48 33 C4 48 89 84 24 B0 00 00 00 0F 57 C0 0F 2F C8";
 
 #else
-/* Steam/Ubiconnect clients */
+// Steam/Ubiconnect clients
 
-static const uint8_t NtProtectVirtualMemory_prologue[] = {0xb8, 0x50, 0x00, 0x00, 0x00};
+static const uint8_t NtProtectVirtualMemoryPrologue[] = {0xb8, 0x50, 0x00, 0x00, 0x00};
+static const char *SetFPSLimitPattern = "55 8B EC 6A FF 68 ? ? ? ? 64 A1 00 00 00 00 50 83 EC 6C A1 ? ? ? ? 33 C5 89 "
+                                        "45 F0 50 8D 45 F4 64 A3 00 00 00 00 F3 0F 10 4D 08";
 
-static const uint16_t SetFPSLimit_signature[] = {0x55, 0x8B, 0xEC, 0x6A, 0xFF, 0x68, -1,   -1,   -1,   -1,   0x64, 0xA1,
-                                                 0x00, 0x00, 0x00, 0x00, 0x50, 0x83, 0xEC, 0x6C, 0xA1, -1,   -1,   -1,
-                                                 -1,   0x33, 0xC5, 0x89, 0x45, 0xF0, 0x50, 0x8D, 0x45, 0xF4, 0x64, 0xA3,
-                                                 0x00, 0x00, 0x00, 0x00, 0xF3, 0x0F, 0x10, 0x4D, 0x08};
 #endif
-/* NOLINTEND */
+// NOLINTEND
