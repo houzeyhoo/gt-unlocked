@@ -1,5 +1,9 @@
 {
-    "version": 10,
+    "version": 8,
+    "cmakeMinimumRequired": {
+        "major": 3,
+        "minor": 25
+    },
     "configurePresets": [
         {
             "name": "base",
@@ -7,9 +11,9 @@
             "generator": "Ninja",
             "binaryDir": "${sourceDir}/build/${presetName}",
             "cacheVariables": {
-                "CMAKE_BUILD_TYPE": "Release",
+                "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
                 "CMAKE_C_COMPILER": "cl.exe",
-                "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+                "CMAKE_BUILD_TYPE": "Release"
             }
         },
         {

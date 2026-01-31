@@ -4,8 +4,6 @@
 
 #include <minhook.h>
 #include <stdlib.h>
-
-#define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 
 void show_error_box(const char *msg)

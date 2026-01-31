@@ -1,7 +1,6 @@
 #pragma once
 #include <stdint.h>
 
-#define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 
 #define COUNT_OF(x) ((sizeof(x) / sizeof(0 [x])) / ((size_t)(!(sizeof(x) % sizeof(0 [x])))))
