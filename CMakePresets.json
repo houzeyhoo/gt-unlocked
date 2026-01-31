@@ -32,5 +32,15 @@
                 "strategy": "external"
             }
         }
+    ],
+    "buildPresets": [
+        {
+            "name": "release-x86",
+            "configurePreset": "release-x86"
+        },
+        {
+            "name": "release-x64",
+            "configurePreset": "release-x64"
+        }
     ]
 }
