@@ -5,4 +5,5 @@ if(NOT MSVC)
     message(FATAL_ERROR "This project may only be built via MSVC.")
 endif()
 
+add_subdirectory(vendor/minhook)
 add_subdirectory(src)
