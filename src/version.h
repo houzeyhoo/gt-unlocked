@@ -11,7 +11,7 @@
 
 static const uint8_t NtProtectVirtualMemoryPrologue[] = {0x4c, 0x8b, 0xd1, 0xb8, 0x50};
 static const char *SetFPSLimitPattern =
-    "4C 8B DC 48 81 EC C8 00 00 00 48 8B ? ? ? ? ? 48 33 C4 48 89 84 24 B0 00 00 00 0F 57 C0 0F 2F C8";
+    "4C 8B DC 48 81 EC D8 00 00 00 48 8B ? ? ? ? ? 48 33 C4 48 89 84 24 C0 00 00 00 0F 57 C0 0F 2F C8";
 
 #else
 // Steam/Ubiconnect clients
